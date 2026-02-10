@@ -318,6 +318,7 @@
     <script>
         let uploadedImages = [];
         const MAX_PREVIEW_COLUMNS = 4;
+        const MAX_COLUMNS = 10;
 
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
@@ -337,7 +338,7 @@
 
         // Intelligent grid calculation function
         function calculateOptimalGrid(imageCount) {
-            if (imageCount === 0) return { columns: 1, rows: 1 };
+            if (imageCount <= 0) return { columns: 1, rows: 1 };
             if (imageCount === 1) return { columns: 1, rows: 1 };
             if (imageCount === 2) return { columns: 2, rows: 1 };
             if (imageCount === 3) return { columns: 3, rows: 1 };
@@ -365,7 +366,7 @@
                 columnsValue.textContent = 'Auto';
             } else {
                 const numValue = parseInt(value);
-                if (!isNaN(numValue) && numValue >= 1 && numValue <= 10) {
+                if (!isNaN(numValue) && numValue >= 1 && numValue <= MAX_COLUMNS) {
                     columnsValue.textContent = numValue;
                 } else {
                     columnsValue.textContent = 'Auto';
@@ -499,7 +500,7 @@
                 columns = gridDimensions.columns;
             } else {
                 columns = parseInt(columnsInputValue);
-                if (isNaN(columns) || columns < 1) {
+                if (isNaN(columns) || columns < 1 || columns > MAX_COLUMNS) {
                     columns = calculateOptimalGrid(uploadedImages.length).columns;
                 }
             }
