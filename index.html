@@ -230,6 +230,37 @@
             margin-bottom: 15px;
             font-weight: 500;
         }
+
+        .upload-hint {
+            color: #999;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ff4444;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateX(-50%) translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body>
@@ -240,7 +271,7 @@
         <div class="upload-area" id="uploadArea">
             <div class="upload-icon">📤</div>
             <div class="upload-text">Click to upload or drag and drop images here</div>
-            <div style="color: #999; font-size: 14px; margin-top: 5px;">Supports JPG, PNG, GIF</div>
+            <div class="upload-hint">Supports JPG, PNG, GIF</div>
             <input type="file" id="fileInput" accept="image/*" multiple>
         </div>
 
@@ -285,6 +316,7 @@
 
     <script>
         let uploadedImages = [];
+        const MAX_PREVIEW_COLUMNS = 4;
 
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
@@ -332,11 +364,22 @@
             handleFiles(e.dataTransfer.files);
         });
 
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
         function handleFiles(files) {
             const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
             
             if (imageFiles.length === 0) {
-                alert('Please select valid image files');
+                showNotification('Please select valid image files');
                 return;
             }
 
@@ -362,7 +405,7 @@
                 previewArea.style.display = 'block';
                 generateBtn.disabled = false;
 
-                const cols = Math.min(4, Math.ceil(Math.sqrt(uploadedImages.length)));
+                const cols = Math.min(MAX_PREVIEW_COLUMNS, Math.ceil(Math.sqrt(uploadedImages.length)));
                 previewGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
                 uploadedImages.forEach((item, index) => {
