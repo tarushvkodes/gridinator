@@ -513,6 +513,12 @@
             // Calculate dimensions for each image while preserving aspect ratio
             const imageDimensions = uploadedImages.map(item => {
                 const img = item.img;
+                
+                // Guard against invalid dimensions
+                if (img.width <= 0 || img.height <= 0) {
+                    return { width: maxImageSize, height: maxImageSize, aspectRatio: 1 };
+                }
+                
                 const aspectRatio = img.width / img.height;
                 let width, height;
                 
