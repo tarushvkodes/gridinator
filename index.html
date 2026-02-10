@@ -490,7 +490,7 @@
             if (uploadedImages.length === 0) return;
 
             const spacing = parseInt(spacingInput.value);
-            const imageSize = parseInt(imageSizeSelect.value);
+            const maxImageSize = parseInt(imageSizeSelect.value);
             
             // Determine columns - use auto calculation if not specified
             let columns;
@@ -510,35 +510,90 @@
             const canvas = resultCanvas;
             const ctx = canvas.getContext('2d');
 
-            // Calculate canvas dimensions
-            canvas.width = columns * imageSize + (columns - 1) * spacing;
-            canvas.height = rows * imageSize + (rows - 1) * spacing;
+            // Calculate dimensions for each image while preserving aspect ratio
+            const imageDimensions = uploadedImages.map(item => {
+                const img = item.img;
+                const aspectRatio = img.width / img.height;
+                let width, height;
+                
+                if (aspectRatio > 1) {
+                    // Landscape: width is limiting factor
+                    width = maxImageSize;
+                    height = maxImageSize / aspectRatio;
+                } else {
+                    // Portrait or square: height is limiting factor
+                    height = maxImageSize;
+                    width = maxImageSize * aspectRatio;
+                }
+                
+                return { width, height, aspectRatio };
+            });
+
+            // Calculate row heights - each row uses the max height in that row
+            const rowHeights = [];
+            for (let row = 0; row < rows; row++) {
+                let maxHeight = 0;
+                for (let col = 0; col < columns; col++) {
+                    const index = row * columns + col;
+                    if (index < imageDimensions.length) {
+                        maxHeight = Math.max(maxHeight, imageDimensions[index].height);
+                    }
+                }
+                rowHeights.push(maxHeight);
+            }
+
+            // Calculate column widths - each column uses the max width in that column
+            const colWidths = [];
+            for (let col = 0; col < columns; col++) {
+                let maxWidth = 0;
+                for (let row = 0; row < rows; row++) {
+                    const index = row * columns + col;
+                    if (index < imageDimensions.length) {
+                        maxWidth = Math.max(maxWidth, imageDimensions[index].width);
+                    }
+                }
+                colWidths.push(maxWidth);
+            }
+
+            // Calculate canvas dimensions based on actual image sizes
+            const canvasWidth = colWidths.reduce((sum, w) => sum + w, 0) + (columns - 1) * spacing;
+            const canvasHeight = rowHeights.reduce((sum, h) => sum + h, 0) + (rows - 1) * spacing;
+
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
 
             // Fill with white background
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw images
+            // Draw images with preserved aspect ratios
             uploadedImages.forEach((item, index) => {
                 const col = index % columns;
                 const row = Math.floor(index / columns);
-                const x = col * (imageSize + spacing);
-                const y = row * (imageSize + spacing);
+                
+                // Calculate x position by summing previous column widths
+                let x = 0;
+                for (let c = 0; c < col; c++) {
+                    x += colWidths[c] + spacing;
+                }
+                
+                // Calculate y position by summing previous row heights
+                let y = 0;
+                for (let r = 0; r < row; r++) {
+                    y += rowHeights[r] + spacing;
+                }
 
-                // Draw image with proper aspect ratio (cover)
                 const img = item.img;
-                const scale = Math.max(imageSize / img.width, imageSize / img.height);
-                const scaledWidth = img.width * scale;
-                const scaledHeight = img.height * scale;
-                const offsetX = (imageSize - scaledWidth) / 2;
-                const offsetY = (imageSize - scaledHeight) / 2;
+                const dims = imageDimensions[index];
+                
+                // Center the image in its cell if it's smaller than the max in that row/column
+                const cellWidth = colWidths[col];
+                const cellHeight = rowHeights[row];
+                const offsetX = (cellWidth - dims.width) / 2;
+                const offsetY = (cellHeight - dims.height) / 2;
 
-                ctx.save();
-                ctx.beginPath();
-                ctx.rect(x, y, imageSize, imageSize);
-                ctx.clip();
-                ctx.drawImage(img, x + offsetX, y + offsetY, scaledWidth, scaledHeight);
-                ctx.restore();
+                // Draw image at its natural aspect ratio
+                ctx.drawImage(img, x + offsetX, y + offsetY, dims.width, dims.height);
             });
 
             resultArea.style.display = 'block';
