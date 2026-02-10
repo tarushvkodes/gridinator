@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gridinator - Image Grid Merger</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            background-color: #f8f9ff;
+            border-color: #764ba2;
+        }
+
+        .upload-area.dragover {
+            background-color: #f0f4ff;
+            border-color: #764ba2;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        input[type="number"],
+        input[type="range"],
+        select {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        input[type="range"] {
+            padding: 0;
+        }
+
+        .range-value {
+            text-align: center;
+            color: #667eea;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .preview-area {
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .preview-grid {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .preview-item {
+            position: relative;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .preview-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+
+        .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+            transition: background 0.3s ease;
+        }
+
+        .remove-btn:hover {
+            background: rgba(255, 0, 0, 1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .result-area {
+            margin-top: 20px;
+            text-align: center;
+            display: none;
+        }
+
+        .result-canvas {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+        }
+
+        .image-count {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ Gridinator</h1>
+        <p class="subtitle">Merge your images into a beautiful grid</p>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📤</div>
+            <div class="upload-text">Click to upload or drag and drop images here</div>
+            <div style="color: #999; font-size: 14px; margin-top: 5px;">Supports JPG, PNG, GIF</div>
+            <input type="file" id="fileInput" accept="image/*" multiple>
+        </div>
+
+        <div class="preview-area" id="previewArea">
+            <div class="image-count" id="imageCount">0 images selected</div>
+            <div class="preview-grid" id="previewGrid"></div>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="columns">Columns:</label>
+                <input type="number" id="columns" min="1" max="10" value="3">
+            </div>
+            <div class="control-group">
+                <label for="spacing">Spacing (px):</label>
+                <input type="range" id="spacing" min="0" max="50" value="10">
+                <div class="range-value" id="spacingValue">10px</div>
+            </div>
+            <div class="control-group">
+                <label for="imageSize">Image Size:</label>
+                <select id="imageSize">
+                    <option value="200">Small (200px)</option>
+                    <option value="400" selected>Medium (400px)</option>
+                    <option value="600">Large (600px)</option>
+                    <option value="800">Extra Large (800px)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-primary" id="generateBtn" disabled>Generate Grid</button>
+            <button class="btn-secondary" id="clearBtn">Clear All</button>
+        </div>
+
+        <div class="result-area" id="resultArea">
+            <canvas id="resultCanvas" class="result-canvas"></canvas>
+            <div class="button-group">
+                <button class="btn-primary" id="downloadBtn">Download Grid</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let uploadedImages = [];
+
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const previewArea = document.getElementById('previewArea');
+        const previewGrid = document.getElementById('previewGrid');
+        const imageCount = document.getElementById('imageCount');
+        const columnsInput = document.getElementById('columns');
+        const spacingInput = document.getElementById('spacing');
+        const spacingValue = document.getElementById('spacingValue');
+        const imageSizeSelect = document.getElementById('imageSize');
+        const generateBtn = document.getElementById('generateBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const resultArea = document.getElementById('resultArea');
+        const resultCanvas = document.getElementById('resultCanvas');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        // Update spacing value display
+        spacingInput.addEventListener('input', (e) => {
+            spacingValue.textContent = e.target.value + 'px';
+        });
+
+        // Upload area click
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        function handleFiles(files) {
+            const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+            
+            if (imageFiles.length === 0) {
+                alert('Please select valid image files');
+                return;
+            }
+
+            imageFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        uploadedImages.push({ img, file });
+                        updatePreview();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function updatePreview() {
+            previewGrid.innerHTML = '';
+            imageCount.textContent = `${uploadedImages.length} image${uploadedImages.length !== 1 ? 's' : ''} selected`;
+            
+            if (uploadedImages.length > 0) {
+                previewArea.style.display = 'block';
+                generateBtn.disabled = false;
+
+                const cols = Math.min(4, Math.ceil(Math.sqrt(uploadedImages.length)));
+                previewGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+                uploadedImages.forEach((item, index) => {
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'preview-item';
+                    
+                    const img = document.createElement('img');
+                    img.src = item.img.src;
+                    
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'remove-btn';
+                    removeBtn.textContent = '×';
+                    removeBtn.onclick = () => removeImage(index);
+                    
+                    previewItem.appendChild(img);
+                    previewItem.appendChild(removeBtn);
+                    previewGrid.appendChild(previewItem);
+                });
+            } else {
+                previewArea.style.display = 'none';
+                generateBtn.disabled = true;
+            }
+        }
+
+        function removeImage(index) {
+            uploadedImages.splice(index, 1);
+            updatePreview();
+            resultArea.style.display = 'none';
+        }
+
+        clearBtn.addEventListener('click', () => {
+            uploadedImages = [];
+            fileInput.value = '';
+            updatePreview();
+            resultArea.style.display = 'none';
+        });
+
+        generateBtn.addEventListener('click', generateGrid);
+
+        function generateGrid() {
+            if (uploadedImages.length === 0) return;
+
+            const columns = parseInt(columnsInput.value);
+            const spacing = parseInt(spacingInput.value);
+            const imageSize = parseInt(imageSizeSelect.value);
+            const rows = Math.ceil(uploadedImages.length / columns);
+
+            const canvas = resultCanvas;
+            const ctx = canvas.getContext('2d');
+
+            // Calculate canvas dimensions
+            canvas.width = columns * imageSize + (columns - 1) * spacing;
+            canvas.height = rows * imageSize + (rows - 1) * spacing;
+
+            // Fill with white background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw images
+            uploadedImages.forEach((item, index) => {
+                const col = index % columns;
+                const row = Math.floor(index / columns);
+                const x = col * (imageSize + spacing);
+                const y = row * (imageSize + spacing);
+
+                // Draw image with proper aspect ratio (cover)
+                const img = item.img;
+                const scale = Math.max(imageSize / img.width, imageSize / img.height);
+                const scaledWidth = img.width * scale;
+                const scaledHeight = img.height * scale;
+                const offsetX = (imageSize - scaledWidth) / 2;
+                const offsetY = (imageSize - scaledHeight) / 2;
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(x, y, imageSize, imageSize);
+                ctx.clip();
+                ctx.drawImage(img, x + offsetX, y + offsetY, scaledWidth, scaledHeight);
+                ctx.restore();
+            });
+
+            resultArea.style.display = 'block';
+            resultArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        downloadBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = `gridinator-${Date.now()}.png`;
+            link.href = resultCanvas.toDataURL('image/png');
+            link.click();
+        });
+    </script>
+</body>
+</html>
